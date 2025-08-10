@@ -442,6 +442,11 @@
             <!-- 記録一覧 -->
             <div id="view" class="tab-content">
                 <h2>📋 記録一覧</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn" onclick="exportData()" style="padding: 8px 15px; font-size: 14px;">💾 データをエクスポート</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                    <button class="btn" onclick="document.getElementById('importFile').click()" style="padding: 8px 15px; font-size: 14px;">📁 データをインポート</button>
+                </div>
                 <div id="recordList" class="record-list">
                     <div class="empty-state">
                         <div class="icon">🐱</div>
@@ -767,6 +772,50 @@
                 
                 calendarGrid.appendChild(dayElement);
             }
+        }
+        
+        // データエクスポート
+        function exportData() {
+            const dataStr = JSON.stringify(expenses, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `家計簿データ_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showAlert('💾 データをエクスポートしました！');
+        }
+        
+        // データインポート
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        if (confirm('データをインポートすると現在のデータが置き換えられます。続行しますか？ 🤔')) {
+                            expenses = importedData;
+                            localStorage.setItem('expenses_jp', JSON.stringify(expenses));
+                            displayRecords();
+                            updateStats();
+                            updateCalendar();
+                            showAlert('📁 データをインポートしました！');
+                        }
+                    } else {
+                        showAlert('ファイル形式が正しくありません！', 'error');
+                    }
+                } catch (error) {
+                    showAlert('ファイルの読み込みに失敗しました！', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
         }
         
         // 初期化
