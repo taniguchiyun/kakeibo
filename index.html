@@ -503,8 +503,9 @@
     </div>
 
     <script>
-        // 初期化
-        let expenses = JSON.parse(localStorage.getItem('expenses_jp')) || [];
+        // 初期化 - 複数のキーをチェック
+        let expenses = JSON.parse(localStorage.getItem('expenses_jp')) || 
+                      JSON.parse(localStorage.getItem('expenses')) || [];
         
         // カテゴリアイコンマップ
         const categoryIcons = {
@@ -614,7 +615,9 @@
             };
             
             expenses.push(expense);
+            // 両方のキーに保存
             localStorage.setItem('expenses_jp', JSON.stringify(expenses));
+            localStorage.setItem('expenses', JSON.stringify(expenses));
             
             document.getElementById('expenseForm').reset();
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
@@ -662,7 +665,9 @@
         function deleteRecord(id) {
             if (confirm('この記録を削除しますか？ 🤔')) {
                 expenses = expenses.filter(expense => expense.id !== id);
+                // 両方のキーに保存
                 localStorage.setItem('expenses_jp', JSON.stringify(expenses));
+                localStorage.setItem('expenses', JSON.stringify(expenses));
                 displayRecords();
                 showAlert('🗑️ 記録が削除されました！');
             }
@@ -841,7 +846,9 @@
                     if (Array.isArray(importedData)) {
                         if (confirm('データをインポートすると現在のデータが置き換えられます。続行しますか？ 🤔')) {
                             expenses = importedData;
+                            // 両方のキーに保存
                             localStorage.setItem('expenses_jp', JSON.stringify(expenses));
+                            localStorage.setItem('expenses', JSON.stringify(expenses));
                             displayRecords();
                             updateStats();
                             updateCalendar();
@@ -882,7 +889,9 @@
                 if (Array.isArray(importedData)) {
                     if (confirm('データをインポートすると現在のデータが置き換えられます。続行しますか？ 🤔')) {
                         expenses = importedData;
+                        // 両方のキーに保存
                         localStorage.setItem('expenses_jp', JSON.stringify(expenses));
+                        localStorage.setItem('expenses', JSON.stringify(expenses));
                         displayRecords();
                         updateStats();
                         updateCalendar();
