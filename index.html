@@ -445,7 +445,19 @@
                 <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn" onclick="exportData()" style="padding: 8px 15px; font-size: 14px;">💾 データをエクスポート</button>
                     <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
-                    <button class="btn" onclick="document.getElementById('importFile').click()" style="padding: 8px 15px; font-size: 14px;">📁 データをインポート</button>
+                    <button class="btn" onclick="document.getElementById('importFile').click()" style="padding: 8px 15px; font-size: 14px;">📁 ファイルインポート</button>
+                    <button class="btn" onclick="showTextImport()" style="padding: 8px 15px; font-size: 14px;">📱 テキストインポート</button>
+                </div>
+                
+                <!-- テキストインポートエリア -->
+                <div id="textImportArea" style="display: none; margin-bottom: 20px; padding: 20px; border: 2px solid #e9ecef; border-radius: 12px; background: #f8f9fa;">
+                    <h4 style="margin-bottom: 10px;">📱 テキストでデータをインポート</h4>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">エクスポートしたデータを下のテキストエリアに貼り付けてください：</p>
+                    <textarea id="importText" style="width: 100%; height: 150px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 12px; font-family: monospace;" placeholder="エクスポートした JSON データをここに貼り付けてください..."></textarea>
+                    <div style="margin-top: 10px; display: flex; gap: 10px;">
+                        <button class="btn" onclick="importFromText()" style="padding: 8px 15px; font-size: 14px;">✅ インポート実行</button>
+                        <button class="btn btn-danger" onclick="hideTextImport()" style="padding: 8px 15px; font-size: 14px;">❌ キャンセル</button>
+                    </div>
                 </div>
                 <div id="recordList" class="record-list">
                     <div class="empty-state">
@@ -777,16 +789,44 @@
         // データエクスポート
         function exportData() {
             const dataStr = JSON.stringify(expenses, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `家計簿データ_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showAlert('💾 データをエクスポートしました！');
+            
+            // モバイルデバイスの場合はテキストで表示
+            if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>家計簿データ</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                body { font-family: monospace; padding: 20px; word-break: break-all; }
+                                textarea { width: 100%; height: 400px; font-size: 12px; }
+                                button { padding: 10px 20px; margin: 10px 5px; font-size: 16px; }
+                            </style>
+                        </head>
+                        <body>
+                            <h3>💾 家計簿データ</h3>
+                            <p>下のテキストを全選択してコピーしてください：</p>
+                            <textarea readonly onclick="this.select()">${dataStr}</textarea>
+                            <br>
+                            <button onclick="window.close()">閉じる</button>
+                        </body>
+                    </html>
+                `);
+                showAlert('📱 モバイル用エクスポートを開きました！');
+            } else {
+                // PCの場合はファイルダウンロード
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `家計簿データ_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showAlert('💾 データをエクスポートしました！');
+            }
         }
         
         // データインポート
@@ -816,6 +856,45 @@
             };
             reader.readAsText(file);
             event.target.value = '';
+        }
+        
+        // テキストインポート表示
+        function showTextImport() {
+            document.getElementById('textImportArea').style.display = 'block';
+        }
+        
+        // テキストインポート非表示
+        function hideTextImport() {
+            document.getElementById('textImportArea').style.display = 'none';
+            document.getElementById('importText').value = '';
+        }
+        
+        // テキストからインポート
+        function importFromText() {
+            const textData = document.getElementById('importText').value.trim();
+            if (!textData) {
+                showAlert('テキストを入力してください！', 'error');
+                return;
+            }
+            
+            try {
+                const importedData = JSON.parse(textData);
+                if (Array.isArray(importedData)) {
+                    if (confirm('データをインポートすると現在のデータが置き換えられます。続行しますか？ 🤔')) {
+                        expenses = importedData;
+                        localStorage.setItem('expenses_jp', JSON.stringify(expenses));
+                        displayRecords();
+                        updateStats();
+                        updateCalendar();
+                        hideTextImport();
+                        showAlert('📁 データをインポートしました！');
+                    }
+                } else {
+                    showAlert('データ形式が正しくありません！', 'error');
+                }
+            } catch (error) {
+                showAlert('データの読み込みに失敗しました！正しい JSON 形式か確認してください。', 'error');
+            }
         }
         
         // 初期化
